@@ -78,5 +78,12 @@ impl Area {
 
 fn main() {
     let area = Area::new("input.txt").unwrap();
-    println!("trees: {}", area.count_trees(3, 1));
+    let mut checksum: usize = 1;
+
+    for (right,down) in [(1,1),(3,1),(5,1),(7,1),(1,2)] {
+        checksum *= area.count_trees(right, down)
+    }
+
+    println!("trees on 3/1 path: {}", area.count_trees(3, 1));
+    println!("tree checksum: {}", checksum);
 }
