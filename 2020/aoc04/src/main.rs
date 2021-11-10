@@ -1,18 +1,11 @@
 use regex::Regex;
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::{BufRead, BufReader, Lines},
-};
+use std::collections::HashMap;
+use std::fs;
 
 #[derive(Debug, Copy, Clone)]
 enum Error {
     FileReadError,
     RegexError,
-}
-
-fn lines(filename: &str) -> Result<Lines<BufReader<File>>, Error> {
-    Ok(BufReader::new(File::open(filename).map_err(|_| Error::FileReadError)?).lines())
 }
 
 struct PassportData {
@@ -23,7 +16,7 @@ impl PassportData {
     fn new(data: &str) -> Self {
         PassportData {
             fields: Regex::new(r"(?P<key>[a-z]{3}):(?P<value>[^ \n]+)")
-                .map_err(|x| Error::RegexError)
+                .map_err(|_| Error::RegexError)
                 .unwrap()
                 .captures_iter(&data)
                 .map(|c| (String::from(&c["key"]), String::from(&c["value"])))
