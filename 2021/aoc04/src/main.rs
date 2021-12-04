@@ -19,12 +19,14 @@ struct Square(usize, bool);
 struct Board {
     columns: usize,
     squares: Vec<Square>,
+    won: bool,
 }
 
 #[derive(Clone, Debug)]
 struct Game {
-    inputs: Vec<usize>,
     boards: Vec<Board>,
+    _input: Vec<usize>,
+    _round: usize,
 }
 
 impl Square {
@@ -71,16 +73,22 @@ impl Board {
         Ok(Board {
             columns: columns,
             squares: grid.into_iter().flatten().map(|v| Square::new(v)).collect(),
+            won: false
         })
     }
 
-    fn winning(&self) -> bool {
-        (0..self.columns).any(
-            |anchor| {
-                (0..self.columns).map(|k| self[(anchor, k)]).all(|square| square.marked()) ||
-                (0..self.columns).map(|k| self[(k, anchor)]).all(|square| square.marked())
-            }
-        )
+    fn winning(&mut self) -> bool {
+        if self.won {
+            false 
+        } else {
+            self.won = (0..self.columns).any(
+                |anchor| {
+                    (0..self.columns).map(|k| self[(anchor, k)]).all(|square| square.marked()) ||
+                    (0..self.columns).map(|k| self[(k, anchor)]).all(|square| square.marked())
+                }
+            );
+            self.won
+        }
     }
 
     fn play(&mut self, value: usize) -> &mut Self {
@@ -108,20 +116,38 @@ impl Game {
         let mut paragraphs = paragraph_separator.split(&input);
         let input_values_string = paragraphs.next().ok_or(Error::EmptyInput)?;
         Ok(Game {
-            inputs: digits.find_iter(input_values_string).map(|nr| nr.as_str().parse().unwrap()).collect(),
+            _input: digits.find_iter(input_values_string).map(|nr| nr.as_str().parse().unwrap()).collect(),
+            _round: 0,
             boards: paragraphs.map(|spec| Board::new(spec)).collect::<Result<_,_>>()?
         })
     }
 
-    fn play(&mut self) -> Result<Win, Error> {
-        for input in self.inputs.iter().copied() {
-            for i in 0..self.boards.len() {
-                if self.boards[i].play(input).winning() {
-                    return Ok(Win{board: &self.boards[i], input: input});
+    fn play_round(&mut self) -> Option<Win> {
+        let n = self.boards.len();
+        let m = self._input.len();
+        while self._round < m {
+            let input = self._input[self._round];
+            for i in 0..n {
+                if !self.boards[i].won {
+                    self.boards[i].play(input);
                 }
             }
+            for i in 0..n {
+                if self.boards[i].winning() {
+                    return Some(Win{board: &self.boards[i], input: input});
+                }
+            }
+            self._round += 1;
         }
-        Err(Error::NoWinner)
+        None
+    }
+}
+
+impl Iterator for Game {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<usize> {
+        self.play_round().map(|win| win.score())
     }
 }
 
@@ -143,8 +169,14 @@ fn filename() -> Result<String, Error> {
 fn main_or_error() -> Result<(), Error> {
     let filename = filename()?;
     let mut game = Game::new(fread(&filename)?)?;
-    let win = game.play()?;
-    println!("Score: {}", win.score());
+    if let Some(score) = game.next() {
+        println!("First Score: {}", score);
+    } else {
+        return Err(Error::NoWinner)
+    }
+    if let Some(score) = game.last() {
+        println!("Final Score: {}", score);
+    }
     Ok(())
 } 
 
@@ -164,7 +196,7 @@ fn main() {
             println!("Board was not a {}×{} square.", c, c);
         },
         Err(Error::NoWinner) => {
-            println!("There was no winner.");
+            println!("Noone won!");
         }
     }
 }
