@@ -1,6 +1,6 @@
 use std::fs;
 use std::env;
-use std::ops::{Index, IndexMut};
+use std::ops::Index;
 use regex::Regex;
 
 #[derive(Debug, Clone)]
@@ -48,14 +48,6 @@ impl Index<(usize, usize)> for Board {
         let (row, col) = index;
         if row >= self.columns || col >= self.columns { panic!() }
         &self.squares[row * self.columns + col]
-    }
-}
-
-impl IndexMut<(usize, usize)> for Board {
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
-        let (row, col) = index;
-        if row >= self.columns || col >= self.columns { panic!() }
-        &mut self.squares[row * self.columns + col]
     }
 }
 
