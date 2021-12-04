@@ -1,0 +1,178 @@
+use std::fs;
+use std::env;
+use std::ops::{Index, IndexMut};
+use regex::Regex;
+
+#[derive(Debug, Clone)]
+enum Error {
+    FileReadError(String),
+    MissingArgument,
+    EmptyInput,
+    NotASquare(usize),
+    NoWinner
+}
+
+#[derive(Copy, Clone, Debug)]
+struct Square(usize, bool);
+
+#[derive(Clone, Debug)]
+struct Board {
+    columns: usize,
+    squares: Vec<Square>,
+}
+
+#[derive(Clone, Debug)]
+struct Game {
+    inputs: Vec<usize>,
+    boards: Vec<Board>,
+}
+
+impl Square {
+    fn new(value: usize) -> Self {
+        Square(value, false)
+    }
+    fn mark(&mut self, value: usize) -> () {
+        if value == self.0 { self.1 = true; }
+    }
+    #[inline]
+    fn marked(&self) -> bool { self.1 }
+}
+
+impl From<Square> for usize {
+    fn from(item: Square) -> usize {item.0} 
+}
+
+impl Index<(usize, usize)> for Board {
+    type Output = Square;
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (row, col) = index;
+        if row >= self.columns || col >= self.columns { panic!() }
+        &self.squares[row * self.columns + col]
+    }
+}
+
+impl IndexMut<(usize, usize)> for Board {
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        let (row, col) = index;
+        if row >= self.columns || col >= self.columns { panic!() }
+        &mut self.squares[row * self.columns + col]
+    }
+}
+
+impl Board {
+    fn new(grid: &str) -> Result<Self, Error> {
+        let number_pattern = Regex::new(r"\b\d+\b").unwrap();
+        let lines: Vec<&str> = grid.split('\n')
+            .map(|s| s.trim())
+            .filter(|s| s.len() > 0)
+            .collect();
+        let columns = lines.len();
+        if columns == 0 {
+            return Err(Error::EmptyInput);
+        }
+        let grid: Vec<Vec<usize>> = lines.iter().map(|line|
+            number_pattern.find_iter(line).map(|nr| nr.as_str().parse().unwrap()).collect::<Vec<_>>()
+        ).collect();
+        if grid.iter().any(|v| v.len() != columns) {
+            return Err(Error::NotASquare(columns));
+        }
+        Ok(Board {
+            columns: columns,
+            squares: grid.into_iter().flatten().map(|v| Square::new(v)).collect(),
+        })
+    }
+
+    fn winning(&self) -> bool {
+        (0..self.columns).any(
+            |anchor| {
+                (0..self.columns).map(|k| self[(anchor, k)]).all(|square| square.marked()) ||
+                (0..self.columns).map(|k| self[(k, anchor)]).all(|square| square.marked())
+            }
+        )
+    }
+
+    fn play(&mut self, value: usize) -> &mut Self {
+        for square in &mut self.squares { square.mark(value) }
+        self
+    }
+}
+
+struct Win<'a> {
+    input: usize,
+    board: &'a Board
+}
+
+impl<'a> Win<'a> {
+    fn score(&'a self) -> usize {
+        self.input * self.board.squares.iter().fold(0, |a, x| if x.marked() {a} else {a + x.0})
+    }
+}
+
+
+impl Game {
+    fn new(input: String) -> Result<Self, Error> {
+        let paragraph_separator = Regex::new(r"\n\s*\n").unwrap();
+        let digits = Regex::new(r"\b\d+\b").unwrap();
+        let mut paragraphs = paragraph_separator.split(&input);
+        let input_values_string = paragraphs.next().ok_or(Error::EmptyInput)?;
+        Ok(Game {
+            inputs: digits.find_iter(input_values_string).map(|nr| nr.as_str().parse().unwrap()).collect(),
+            boards: paragraphs.map(|spec| Board::new(spec)).collect::<Result<_,_>>()?
+        })
+    }
+
+    fn play(&mut self) -> Result<Win, Error> {
+        for input in self.inputs.iter().copied() {
+            for i in 0..self.boards.len() {
+                if self.boards[i].play(input).winning() {
+                    return Ok(Win{board: &self.boards[i], input: input});
+                }
+            }
+        }
+        Err(Error::NoWinner)
+    }
+}
+
+
+fn fread(filename: &str) -> Result<String, Error> {
+    fs::read_to_string(filename)
+        .map_err(|_| Error::FileReadError(String::from(filename)))
+}
+
+fn filename() -> Result<String, Error> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        Err(Error::MissingArgument)
+    } else {
+        Ok(args[1].clone())
+    }
+}
+
+fn main_or_error() -> Result<(), Error> {
+    let filename = filename()?;
+    let mut game = Game::new(fread(&filename)?)?;
+    let win = game.play()?;
+    println!("Score: {}", win.score());
+    Ok(())
+} 
+
+fn main() {
+    match main_or_error() {
+        Ok(_) => (),
+        Err(Error::MissingArgument) => {
+            println!("Please specify input file.");
+        },
+        Err(Error::FileReadError(name)) => {
+            println!("Failed to read from file: {}", name);
+        },
+        Err(Error::EmptyInput) => {
+            println!("Error: Empty input.");
+        },
+        Err(Error::NotASquare(c)) => {
+            println!("Board was not a {}×{} square.", c, c);
+        },
+        Err(Error::NoWinner) => {
+            println!("There was no winner.");
+        }
+    }
+}
