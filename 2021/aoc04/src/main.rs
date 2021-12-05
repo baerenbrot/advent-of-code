@@ -40,8 +40,8 @@ impl Square {
     fn marked(&self) -> bool { self.1 }
 }
 
-impl From<Square> for usize {
-    fn from(item: Square) -> usize {item.0} 
+impl From<&Square> for usize {
+    fn from(item: &Square) -> usize {item.0} 
 }
 
 impl Index<(usize, usize)> for Board {
@@ -104,7 +104,7 @@ struct Win<'a> {
 
 impl<'a> Win<'a> {
     fn score(&'a self) -> usize {
-        self.input * self.board.squares.iter().fold(0, |a, x| if x.marked() {a} else {a + x.0})
+        self.input * self.board.squares.iter().fold(0, |a, x| if x.marked() {a} else {a + usize::from(x)})
     }
 }
 
