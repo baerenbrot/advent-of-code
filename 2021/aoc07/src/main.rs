@@ -30,14 +30,14 @@ impl Crabs {
         Ok(Crabs(result))
     }
 
-    fn linear_fuel_cost(&self, to: isize, computation: fn(isize) -> isize) -> isize {
+    fn fuel_cost(&self, to: isize, computation: fn(isize) -> isize) -> isize {
         self.0.iter().map(|(&position, count)| computation((position - to).abs()) * count).sum()
     }
 
     fn minimum_fuel_cost(&self, computation: fn(isize) -> isize) -> Option<isize> {
         let lower_bound = *self.0.keys().min()?;
         let upper_bound = *self.0.keys().max()?;
-        (lower_bound..=upper_bound).map(|to| self.linear_fuel_cost(to, computation)).min()
+        (lower_bound..=upper_bound).map(|to| self.fuel_cost(to, computation)).min()
     }
 }
 
