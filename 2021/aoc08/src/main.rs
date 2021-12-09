@@ -26,7 +26,7 @@ impl From<Wire> for usize {
     fn from(t: Wire) -> usize { t as usize }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash)]
 struct Signal(u8);
 
 type Wiring = [Wire; 7];
@@ -139,8 +139,11 @@ impl BrokenScreen {
     }
 
     fn is_valid(&self, wiring: Wiring) -> bool {
-        let rewired: HashSet<Signal> = self.signals.iter().map(|signal| signal.rewire(wiring)).collect();
-        rewired == HashSet::from_iter(SIGNAL_DEFAULTS)
+        self.signals.iter()
+            .map(|signal| signal.rewire(wiring))
+            .cartesian_product(SIGNAL_DEFAULTS)
+            .filter(|(a, b)| a == b)
+            .count() == SIGNAL_DEFAULTS.len()
     }
 
     fn rewire(&self) -> Option<Wiring> {
