@@ -74,8 +74,7 @@ impl Signal {
     }
 
     fn rewire(&self, wiring: Wiring) -> Self {
-        let r: Vec<Wire> = self.iter().collect();
-        Signal::new(&r.iter().map(|&w| wiring[usize::from(w)]).collect())
+        Signal::new(&self.iter().map(|w| wiring[usize::from(w)]).collect())
     }
 
     fn display(&self) -> Result<usize, Error> {
@@ -139,14 +138,16 @@ impl BrokenScreen {
     }
 
     fn is_valid(&self, wiring: Wiring) -> bool {
-        self.signals.iter()
+        let mut converted: HashSet<Signal> = self.signals.iter()
             .map(|signal| signal.rewire(wiring))
-            .cartesian_product(SIGNAL_DEFAULTS)
-            .filter(|(a, b)| a == b)
-            .count() == SIGNAL_DEFAULTS.len()
+            .collect();
+        for signal in &SIGNAL_DEFAULTS {
+            converted.remove(signal);
+        }
+        converted.is_empty()
     }
 
-    fn rewire(&self) -> Option<Wiring> {
+    fn fix(&self) -> Option<Wiring> {
         let all = [Wire::A,Wire::B,Wire::C,Wire::D,Wire::E,Wire::F,Wire::G];
         for permutation in all.into_iter().permutations(7) {
             let wiring: Wiring = permutation.try_into().unwrap();
@@ -167,12 +168,12 @@ fn main_or_error() -> Result<(), Error> {
 
     for (k, line) in line_breaks.split(&file_data.trim()).enumerate() {
         let screen = BrokenScreen::new(line)?;
-        let wiring = screen.rewire().ok_or(Error::CouldNotRewire)?;
+        let wiring = screen.fix().ok_or(Error::CouldNotRewire)?;
         let display: Vec<usize> = screen.display
             .iter().map(|t| t.rewire(wiring).display()).collect::<Result<_,_>>()?;
-        part2sum += display.iter().copied().fold(0, |a, d| a * 10 + d);
         part1sum += display.iter().copied()
-            .filter(|&t| t == 1 || t == 4 || t == 7 || t == 8).count();
+                .filter(|&t| t == 1 || t == 4 || t == 7 || t == 8).count();
+        part2sum += display.iter().copied().fold(0, |a, d| a * 10 + d);
         println!("Display Digits {:3}: {}", k,
             display.iter().map(|t| t.to_string()).join("-"));
     }
