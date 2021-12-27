@@ -9,7 +9,6 @@ enum Error {
     ParsingError,
 }
 
-
 fn file_name() -> Result<String, Error> {
     Ok(env::args().nth(1).ok_or(Error::ArgumentMissing)?)
 }
@@ -49,7 +48,6 @@ fn main_or_error() -> Result<(), Error> {
     println!("Actual Minimum Fuel Cost: {}", crabs.minimum_fuel_cost(|t| t * (t+1) / 2).unwrap());
     Ok(())
 }
-
 
 fn main() {
     match main_or_error() {
