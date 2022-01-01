@@ -47,9 +47,9 @@ impl Fold {
         let y = dot.y;
         let t = self.offset;
         match self.axis {
-            Axis::X if x > t => Ok(Dot{x:x-t-1,y}),
-            Axis::X if x < t => Ok(Dot{x:t-1-x,y}),
+            Axis::X if x > t => Ok(Dot{x:2*t-x,y}),
             Axis::Y if y > t => Ok(Dot{x,y:2*t-y}),
+            Axis::X if x < t => Ok(*dot),
             Axis::Y if y < t => Ok(*dot),
             _ => Err(Error::ImpossibleFold(dot.clone(), self.clone()))
         }
