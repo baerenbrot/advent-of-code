@@ -135,7 +135,6 @@ impl NavigationalSystem {
         }
         self.scanned()
     }
-
 }
 
 fn main_or_error() -> Result<(),Error> {
