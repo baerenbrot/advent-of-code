@@ -131,7 +131,6 @@ impl<'a> Iterator for ArcIteratorX<'a> {
 
 }
 
-
 impl Area {
     fn new(spec: &str) -> Result<Self, Error> {
         let pattern = Regex::new(
@@ -175,7 +174,6 @@ impl Area {
     }
 
 }
-
 
 fn main() {
     if let Ok(area) = Area::new("target area: x=20..30, y=-10..-5") {
